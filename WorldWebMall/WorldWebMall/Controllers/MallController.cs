@@ -24,7 +24,7 @@ using BitCode.Owin.Security.LinkedIn;
 
 namespace WorldWebMall.Controllers
 {
-    [Authorize] //for checking rep
+    [Authorize] // testing repos
     [RoutePrefix("customer")]
     //[EnableCors(origins: "http://ec2-52-88-34-32.us-west-2.compute.amazonaws.com", headers: "*", methods: "*")]
     public class MallController : ApiController
