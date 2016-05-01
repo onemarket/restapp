@@ -91,6 +91,8 @@ namespace WorldWebMall.Controllers
             {
                 return BadRequest(ModelState);
             }
+
+            //might be a way of doing the mapping at once
             string UserId = User.Identity.GetUserId();
             ICollection<ContactNumber> contact = Mapper.Map<ICollection<ContactNumber>>(contacts);
             Company company = await db.Companies.FindAsync(UserId);
@@ -117,8 +119,10 @@ namespace WorldWebMall.Controllers
         [Route("get-contacts")]
         public IHttpActionResult GetContacts()
         {
+            //the company variable under contacts has a null on it
             string UserId = User.Identity.GetUserId();
-            var contacts = db.ContactNumbers.Where(c => c.CompanyId == UserId);
+            var contacts = db.ContactNumbers.Where(c => c.CompanyId == UserId)
+                                .Project().To<ContactDTO>();
 
             return Ok(contacts);
         }

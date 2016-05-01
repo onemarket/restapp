@@ -381,7 +381,8 @@ namespace WorldWebMall.Controllers
                 Company company = new Company();
                 company.CompanyId = currentUser.Id;
                 company.name = model.fname;
-                
+                company.registrationDate = DateTime.UtcNow;
+                company.substription = "premium";
 
                 db.Companies.Add(company);
                 db.Entry(company).State = System.Data.Entity.EntityState.Added;

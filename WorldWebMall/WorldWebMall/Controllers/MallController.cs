@@ -540,7 +540,7 @@ namespace WorldWebMall.Controllers
             string UserId = User.Identity.GetUserId();
             Customer customer = await db.Customers.FindAsync(UserId);
 
-            IQueryable<CompanyDTO> result = db.Companies.Where(c => c.Followers.Where(a => a.CustomerId == UserId).Count() != 0)
+            IQueryable<CompanyDTO> result = db.Companies.Where(c => c.Followers.Where(a => a.CustomerId == UserId).Count() == 0)
                                                 .OrderBy(o => o.name).Skip(amount * (page - 1)).Take(amount)
                                                 .Project().To<CompanyDTO>();
 
@@ -553,7 +553,7 @@ namespace WorldWebMall.Controllers
         /**
          * Adverts operations
          */
-        [Route("get-adverts")]
+        [Route("get-featured-adverts")]
         [ResponseType(typeof(ICollection<Advertisement>))]
         public IHttpActionResult GetAdverts(int page, int amount , double longitude , double latitude)
         {
@@ -606,6 +606,7 @@ namespace WorldWebMall.Controllers
             {
                 title = advert.title,
                 info = advert.details,
+                price = advert.price,
                 time = DateTime.UtcNow,
                 exp = DateTime.UtcNow.AddDays(20)
             };
@@ -1187,7 +1188,7 @@ namespace WorldWebMall.Controllers
         
 
         //Get shop's private page
-        [Route("get-company-page")]
+        [Route("get-company-profile")]
         [ResponseType(typeof(CompanyDetails))]
         public IHttpActionResult GetCompanyDetails(string id)
         {

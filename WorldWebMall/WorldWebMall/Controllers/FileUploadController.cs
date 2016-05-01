@@ -95,9 +95,7 @@ namespace WorldWebMall.Controllers
                 {
                     throw;
                 }
-            //return StatusCode(HttpStatusCode.Created);
-                return Ok(ad);
-           
+                return StatusCode(HttpStatusCode.Created);
         }
 
         private string GenerateName(string bucketname)
@@ -189,16 +187,13 @@ namespace WorldWebMall.Controllers
             {
                 return BadRequest(ModelState);
             }
-           
-            Customer customer = await db.Customers.FindAsync(User.Identity.GetUserId());
+            string UserId = User.Identity.GetUserId();
+            Customer customer = await db.Customers.FindAsync(UserId);
             //remember to put this wherever user identity is tested
             if (customer == null)
             {
                 return StatusCode(HttpStatusCode.Unauthorized);
             }
-            
-            //get ID of the current profile picture
-            int ID = customer.p_pic.Id;
 
             if (!Request.Content.IsMimeMultipartContent())
             {
@@ -230,20 +225,20 @@ namespace WorldWebMall.Controllers
                 return Ok(e);
             }
 
-            customer.p_pic =  new Picture() { path = bucketname + "/" + filename };
-            db.Entry(customer).State = EntityState.Modified;
-            try
+            Picture pic = db.Customers.Where(c => c.CustomerId == UserId).Select(a => a.p_pic)
+                                .FirstOrDefault();
+
+            if (pic != null)
             {
-                await db.SaveChangesAsync();
+                pic.path = bucketname + "/" + filename;
+                db.Entry(pic).State = EntityState.Modified;
             }
-            catch (DbUpdateException)
+            else
             {
-                throw;
+                customer.p_pic = new Picture() { path = bucketname + "/" + filename };
+                db.Entry(customer).State = EntityState.Modified;
             }
 
-            //delete the removed profile picture using the retrived ID
-            Picture pic = await db.Pictures.FindAsync(ID);
-            db.Pictures.Remove(pic);
 
             try
             {
@@ -266,52 +261,67 @@ namespace WorldWebMall.Controllers
                 return BadRequest(ModelState);
             }
 
-            Company company = await db.Companies.FindAsync(User.Identity.GetUserId());
-
-            HttpRequestMessage request = this.Request;
-            // Verify that this is an HTML Form file upload request
-            if (!Request.Content.IsMimeMultipartContent("form-data"))
+            string UserId = User.Identity.GetUserId();
+            Company company = await db.Companies.FindAsync(UserId);
+            //remember to put this wherever user identity is tested
+            if (company == null)
             {
-                throw new HttpResponseException(Request.CreateResponse(HttpStatusCode.UnsupportedMediaType));
+                return StatusCode(HttpStatusCode.Unauthorized);
             }
+
+            if (!Request.Content.IsMimeMultipartContent())
+            {
+                this.Request.CreateResponse(HttpStatusCode.UnsupportedMediaType);
+            }
+
+            InMemoryMultipartStreamProvider provider = await Request.Content.ReadAsMultipartAsync<InMemoryMultipartStreamProvider>(new InMemoryMultipartStreamProvider());
+            IList<HttpContent> files = provider.Files;
+            HttpContent file = files[0];
+
+            Stream fileStream = await file.ReadAsStreamAsync();
 
             // Create a stream provider for setting up output streams
-            MultipartFormDataStreamProvider streamProvider = new MultipartFormDataStreamProvider(ServerUploadFolder);
-
+            string bucketname = "debug123456789oitems";
+            string filename = GenerateName(bucketname);
             try
             {
-                // Read the form data.
-                await Request.Content.ReadAsMultipartAsync(streamProvider);
-
-                // This illustrates how to get the file names.
-                company.p_pic = new Picture()
-                {
-                    path = streamProvider.FileData.First().LocalFileName
-                };
-
-                db.Entry(company).State = EntityState.Modified;
-
-                try
-                {
-                    await db.SaveChangesAsync();
-                }
-                catch (DbUpdateException)
-                {
-                    /**if (db.Adverts.Any(a => a.Id == ad.Id))
-                    {
-                        return Conflict();
-                    }
-                    else*/
-                    {
-                        throw;
-                    }
-                }
+                PutObjectRequest s3Request = new PutObjectRequest();
+                s3Request.BucketName = bucketname;
+                s3Request.InputStream = fileStream;
+                s3Request.Key = filename;
+                s3Request.ContentType = provider.GetImageType();
+                s3Request.CannedACL = S3CannedACL.PublicRead;
+                s3Request.StorageClass = S3StorageClass.Standard;
+                s3Client.PutObject(s3Request);
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
-                return InternalServerError(e);
+                return Ok(e);
             }
 
+            Picture pic = db.Companies.Where(c => c.CompanyId == UserId).Select(a => a.p_pic)
+                                .FirstOrDefault();
+
+            if (pic != null)
+            {
+                pic.path = bucketname + "/" + filename;
+                db.Entry(pic).State = EntityState.Modified;   
+            }
+            else
+            {
+                company.p_pic = new Picture() { path = bucketname + "/" + filename };
+                db.Entry(company).State = EntityState.Modified;
+            }
+
+            
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                throw;
+            }
             return StatusCode(HttpStatusCode.Created);
 
         }
@@ -325,52 +335,67 @@ namespace WorldWebMall.Controllers
                 return BadRequest(ModelState);
             }
 
-            Company company = await db.Companies.FindAsync(User.Identity.GetUserId());
-
-            HttpRequestMessage request = this.Request;
-            // Verify that this is an HTML Form file upload request
-            if (!Request.Content.IsMimeMultipartContent("form-data"))
+            string UserId = User.Identity.GetUserId();
+            Company company = await db.Companies.FindAsync(UserId);
+            //remember to put this wherever user identity is tested
+            if (company == null)
             {
-                throw new HttpResponseException(Request.CreateResponse(HttpStatusCode.UnsupportedMediaType));
+                return StatusCode(HttpStatusCode.Unauthorized);
             }
 
+            if (!Request.Content.IsMimeMultipartContent())
+            {
+                this.Request.CreateResponse(HttpStatusCode.UnsupportedMediaType);
+            }
+
+            InMemoryMultipartStreamProvider provider = await Request.Content.ReadAsMultipartAsync<InMemoryMultipartStreamProvider>(new InMemoryMultipartStreamProvider());
+            IList<HttpContent> files = provider.Files;
+            HttpContent file = files[0];
+
+            Stream fileStream = await file.ReadAsStreamAsync();
+
             // Create a stream provider for setting up output streams
-            MultipartFormDataStreamProvider streamProvider = new MultipartFormDataStreamProvider(ServerUploadFolder);
+            string bucketname = "debug123456789oitems";
+            string filename = GenerateName(bucketname);
+            try
+            {
+                PutObjectRequest s3Request = new PutObjectRequest();
+                s3Request.BucketName = bucketname;
+                s3Request.InputStream = fileStream;
+                s3Request.Key = filename;
+                s3Request.ContentType = provider.GetImageType();
+                s3Request.CannedACL = S3CannedACL.PublicRead;
+                s3Request.StorageClass = S3StorageClass.Standard;
+                s3Client.PutObject(s3Request);
+            }
+            catch (Exception e)
+            {
+                return Ok(e);
+            }
+
+            Picture pic = db.Companies.Where(c => c.CompanyId == UserId).Select(a => a.wallpaper)
+                                .FirstOrDefault();
+
+            if (pic != null)
+            {
+                pic.path = bucketname + "/" + filename;
+                db.Entry(pic).State = EntityState.Modified;
+            }
+            else
+            {
+                company.wallpaper = new Picture() { path = bucketname + "/" + filename };
+                db.Entry(company).State = EntityState.Modified;
+            }
+
 
             try
             {
-                // Read the form data.
-                await Request.Content.ReadAsMultipartAsync(streamProvider);
-
-                // This illustrates how to get the file names.
-                company.wallpaper = new Picture()
-                {
-                    path = streamProvider.FileData.First().LocalFileName
-                };
-
-                db.Entry(company).State = EntityState.Modified;
-
-                try
-                {
-                    await db.SaveChangesAsync();
-                }
-                catch (DbUpdateException)
-                {
-                    /**if (db.Adverts.Any(a => a.Id == ad.Id))
-                    {
-                        return Conflict();
-                    }
-                    else*/
-                    {
-                        throw;
-                    }
-                }
+                await db.SaveChangesAsync();
             }
-            catch (System.Exception e)
+            catch (DbUpdateException)
             {
-                return InternalServerError(e);
+                throw;
             }
-
             return StatusCode(HttpStatusCode.Created);
 
         }

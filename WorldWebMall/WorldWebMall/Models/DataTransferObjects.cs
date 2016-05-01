@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.Globalization;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity.Spatial;
 
 namespace WorldWebMall.Models
@@ -48,7 +49,8 @@ namespace WorldWebMall.Models
         public string suburb { get; set; }
         public string city { get; set; }
         public string country { get; set; }
-
+        public double longitude { get; set; }
+        public double latitude { get; set; }
         //public virtual Company Company { get; set; }
     }
 
@@ -119,7 +121,9 @@ namespace WorldWebMall.Models
         public PictureDTO profile_pic { get; set; }
         public string website { get; set; }
         public int number_of_followers { get; set; }
-
+        public DateTime? regDate { get; set; }
+        public string overview { get; set; }
+        public string color { get; set; }
         //public ICollection<CompanyComment> comments { get; set; }
         public ICollection<CompanyAddress> addresses { get; set; }
         public ICollection<CategoryDTO> category { get; set; }
@@ -132,9 +136,9 @@ namespace WorldWebMall.Models
         [Required]
         //[StringLength(100, ErrorMessage = "The {0} must be at least {2} characters long.", MinimumLength = 6)]
         [DataType(DataType.PhoneNumber)]
-        //[Display(Name = "New password")]
         [RegularExpression(@"^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$", ErrorMessage = "Entered mobile format is not valid.")]
         public string numbers { get; set; }
+        [DataType(DataType.EmailAddress)]
         public string emails { get; set; }
     }
 
@@ -147,8 +151,10 @@ namespace WorldWebMall.Models
         }
 
         public string name { get; set; }
-        public string email { get; set; }
+        //public string email { get; set; }
         public string website { get; set; }
+        public string overview { get; set; }
+        public string color { get; set; }
 
         public ICollection<ContactDTO> contacts { get; set; }
         public ICollection<string> categories { get; set; }
@@ -227,6 +233,7 @@ namespace WorldWebMall.Models
     {
         public string title { get; set; }
         public string details { get; set; }
+        [Column(TypeName = "Money")]
         public decimal price { get; set; }
         public string currency { get; set; }
         private string amount { get { return String.Format(CultureInfo.CreateSpecificCulture(currency), "{0:C}", price); } }

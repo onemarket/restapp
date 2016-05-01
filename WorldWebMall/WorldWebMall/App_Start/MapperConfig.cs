@@ -9,6 +9,7 @@ using AutoMapper;
 using System.Data.Entity;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
+using System.Data.Entity.Spatial;
 
 
 namespace WorldWebMall.App_Start
@@ -64,9 +65,21 @@ namespace WorldWebMall.App_Start
                 .ForMember(a => a.city, opt => opt.MapFrom(c => c.city))
                 .ForMember(a => a.country, opt => opt.MapFrom(c => c.country));
 
-            Mapper.CreateMap<Address, CompanyAddress>();
+            Mapper.CreateMap<Address, CompanyAddress>()
+                .ForMember(a => a.address1, opt => opt.MapFrom(c => c.address1))
+                .ForMember(a => a.address2, opt => opt.MapFrom(c => c.address2))
+                .ForMember(a => a.suburb, opt => opt.MapFrom(c => c.suburb))
+                .ForMember(a => a.city, opt => opt.MapFrom(c => c.city))
+                .ForMember(a => a.country, opt => opt.MapFrom(c => c.country))
+                .ForMember(a => a.Location, opt => opt.MapFrom(c => DbGeography.FromText(string.Format("POINT({0} {1})", c.longitude, c.latitude))));
 
-            Mapper.CreateMap<Address, CustomerAddress>();
+            Mapper.CreateMap<Address, CustomerAddress>()
+                .ForMember(a => a.address1, opt => opt.MapFrom(c => c.address1))
+                .ForMember(a => a.address2, opt => opt.MapFrom(c => c.address2))
+                .ForMember(a => a.suburb, opt => opt.MapFrom(c => c.suburb))
+                .ForMember(a => a.city, opt => opt.MapFrom(c => c.city))
+                .ForMember(a => a.country, opt => opt.MapFrom(c => c.country))
+                .ForMember(a => a.Location, opt => opt.MapFrom(c => DbGeography.FromText(string.Format("POINT({0} {1})", c.longitude, c.latitude))));
 
             Mapper.CreateMap<CompanyAddress, Address>();
 
@@ -81,6 +94,9 @@ namespace WorldWebMall.App_Start
                 .ForMember(a => a.category, opt => opt.MapFrom(c => c.Categorys))
                 .ForMember(a => a.website, opt => opt.MapFrom(c => c.website))
                 .ForMember(a => a.profile_pic, opt => opt.MapFrom(c => c.p_pic))
+                .ForMember(a => a.overview, opt => opt.MapFrom(c => c.description))
+                .ForMember(a => a.regDate, opt => opt.MapFrom(c => c.registrationDate))
+                .ForMember(a => a.color, opt => opt.MapFrom(c => c.substription == "premium" ? c.theme : "default"))
                 .ForMember(a => a.number_of_followers, opt => opt.MapFrom(c => c.Followers.Count()));
                 //because of possible concurrent write, number_of_followers is better off calculated
                 //more than one user can possibly click the follow button at close enough time to cause
@@ -133,7 +149,8 @@ namespace WorldWebMall.App_Start
             Mapper.CreateMap<CompanyData, Company>()
                 .ForMember(a => a.name, opt => opt.Condition(c => c.name != null))
                 .ForMember(a => a.website, opt => opt.Condition(c => c.website != null))
-                .ForMember(a => a.Categorys, opt => opt.Condition(c => c.categories != null));
+                .ForMember(a => a.theme, opt => opt.Condition(c => c.color != null))
+                .ForMember(a => a.description, opt => opt.Condition(c => c.overview != null));
 
             Mapper.CreateMap<ContactDTO, ContactNumber>()
                 .ForMember(a => a.numbers, opt => opt.MapFrom(c => c.numbers))

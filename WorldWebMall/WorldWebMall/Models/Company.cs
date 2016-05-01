@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.Data.Entity.Spatial;
 
 namespace WorldWebMall.Models
 {
@@ -26,8 +27,13 @@ namespace WorldWebMall.Models
         [Key]
         public string CompanyId { get; set; }
         public string name { get; set; }
-        //public string email { get; set; }
+        public DateTime registrationDate { get; set; }
         public string website { get; set; }
+        public string description { get; set; }
+        public string theme { get; set; }
+
+        //what services the company paid for
+        public string substription { get; set; }
 
         public virtual Picture p_pic { get; set; }
         public virtual Picture wallpaper { get; set; }
@@ -67,7 +73,7 @@ namespace WorldWebMall.Models
         public string suburb { get; set; }
         public string city { get; set; }
         public string country { get; set; }
-
+        public DbGeography Location { get; set; }
         //public virtual Company Company { get; set; }
     }
 

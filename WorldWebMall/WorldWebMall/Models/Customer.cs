@@ -71,8 +71,10 @@ namespace WorldWebMall.Models
         public string suburb { get; set; }
         public string city { get; set; }
         public string country { get; set; }
+        public DbGeography Location { get; set; }
 
         public virtual Customer Customer { get; set; }
+        
     }
 
     //customers only get notifications form the adverts they would have posted
@@ -152,7 +154,9 @@ namespace WorldWebMall.Models
         public string CustomerId { get; set; }
         public string title { get; set; }
         public string info { get; set; }
-        public string price { get; set; }
+        [Column(TypeName = "Money")]
+        public decimal price { get; set; }
+        public string amount { get; set; }
         public DateTime time { get; set; }
         public DateTime exp { get; set; }
         public DbGeography Location { get; set; } 
