@@ -9,6 +9,8 @@ namespace WorldWebMall
 {
     public class RouteConfig
     {
+        //Original that directed to the Home page
+        /**      
         public static void RegisterRoutes(RouteCollection routes)
         {
             routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
@@ -19,5 +21,20 @@ namespace WorldWebMall
                 defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
             );
         }
+        */
+        
+        //Makes the Help age the index page
+        public static void RegisterRoutes(RouteCollection routes)
+        {
+            routes.IgnoreRoute("{resource}.axd/{*pathInfo}");
+
+            // By default route the user to the Help area if accessing the base URI.
+            routes.MapRoute(
+                "Help Area",
+                "",
+                new { controller = "Help", action = "Index" }
+            ).DataTokens = new RouteValueDictionary(new { area = "HelpPage" });
+        }
+        
     }
 }

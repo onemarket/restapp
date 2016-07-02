@@ -18,12 +18,6 @@ using System.Web.Http.Cors;
 using App.Extensions;
 using WorldWebMall.SocialNetworks;
 using Facebook;
-using System.Net;
-using System.Net.Http;
-using System.Web;
-using System.Web.Http;
-using Microsoft.AspNet.Identity;
-using Microsoft.AspNet.Identity.EntityFramework;
 using Microsoft.AspNet.Identity.Owin;
 
 namespace WorldWebMall.Controllers
@@ -32,7 +26,7 @@ namespace WorldWebMall.Controllers
     public class SocialNetworksController : ApiController
     {
         private MallContext db = new MallContext();
-        static ApplicationUserManager manager = HttpContext.Current.GetOwinContext().GetUserManager<ApplicationUserManager>();
+        //static ApplicationUserManager manager = HttpContext.Current.GetOwinContext().GetUserManager<ApplicationUserManager>();
 
         [Route("get-facebook-pages")]
         public IHttpActionResult GetFBPages()

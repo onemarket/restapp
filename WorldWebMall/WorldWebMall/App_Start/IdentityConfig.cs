@@ -50,7 +50,7 @@ namespace WorldWebMall
     }
 
 
-    public class ApplicationDbInitializer : /*CreateDatabaseIfNotExists<ApplicationDbContext>*/DropCreateDatabaseIfModelChanges<ApplicationDbContext>
+    public class ApplicationDbInitializer : /*CreateDatabaseIfNotExists<ApplicationDbContext>*/ DropCreateDatabaseIfModelChanges<ApplicationDbContext>
     {
         protected override void Seed(ApplicationDbContext context)
         {
@@ -62,19 +62,19 @@ namespace WorldWebMall
         {
             var userManager = HttpContext.Current.GetOwinContext().GetUserManager<ApplicationUserManager>();
             var roleManager = HttpContext.Current.GetOwinContext().Get<RoleManager<IdentityRole>>();
-            //const string name = "admin@example.com";
-            //const string password = "Admin@123456";
+            const string name = "admin@example.com";
+            const string password = "Admin@123456";
             const string roleName = "customer";
             //Create Role Admin if it does not exist          
-            //var role = roleManager.FindByName("customer");
+            var role = roleManager.FindByName("customer");
 
-            //if (role == null)
-            //{
-                //var role = new IdentityRole(roleName);
-                //var roleresult = roleManager.Create(role);
-            //}
+            if (role == null)
+            {
+                role = new IdentityRole(roleName);
+                var roleresult = roleManager.Create(role);
+            }
 
-            /**
+            
             var user = userManager.FindByName(name);
             if (user == null)
             {
@@ -88,7 +88,7 @@ namespace WorldWebMall
             if (!rolesForUser.Contains(role.Name))
             {
                 var result = userManager.AddToRole(user.Id, role.Name);
-            }*/
+            }
         }
     }
 }

@@ -93,11 +93,11 @@ namespace WorldWebMall.Controllers
 
         [Route("test-table")]
         [ResponseType(typeof(Test))]
-        public IHttpActionResult GetTest()
+        public IHttpActionResult GetTest(int i)
         {
-            var advert = db.Adverts;
+            var result = db.ALikes.Where(c => c.AdvertId == i).Select(a => a.Customer).Project().To<CustomerDTO>();
 
-            return Ok(advert);
+            return Ok(result);
         }
 
         [Route("get-test-ad")]
@@ -155,7 +155,7 @@ namespace WorldWebMall.Controllers
 
             
             string UserId = User.Identity.GetUserId();
-
+         
             //IQueryable<BroadcastDTO>
             var result = db.Broadcasts.Where(o => o.time <= (time != null ? time : DateTime.UtcNow) & o.Customers.Any(s => s.CustomerId.Equals(UserId)))
                     .OrderBy(a => a.time).Skip(amount * (page - 1)).Take(amount)
@@ -206,19 +206,8 @@ namespace WorldWebMall.Controllers
                     BroadcastId = id,
                     time = DateTime.UtcNow
                 });
-
-                CompanyNotification notification = new CompanyNotification()
-                {
-                    BroadcastId = id,
-                    time = DateTime.UtcNow,
-                    type = "like",
-                    seen = false,
-                    CustomerId = UserId,
-                    CompanyId = broad.CompanyId
-                };
-
-                db.CompanyNotifications.Add(notification);
-                db.Entry(notification).State = EntityState.Added;
+                await CreateCustomerNotification("broadcast-likes", id, broad.CompanyId);
+                
                 db.Entry(broad).State = EntityState.Modified;
 
                 try
@@ -265,10 +254,11 @@ namespace WorldWebMall.Controllers
             }
 
             //ensure cascade delete
-
+            if (UserId != like.CustomerId)
+                await RemoveCustomerNotification("broadcast-likes", like.BroadcastId);
             db.BLikes.Remove(like);
             await db.SaveChangesAsync();
-
+            
             return StatusCode(HttpStatusCode.NoContent);
         }
 
@@ -288,13 +278,21 @@ namespace WorldWebMall.Controllers
             {
                 return StatusCode(HttpStatusCode.Unauthorized);
             }
-
+            int bId = comment.BroadcastId;
             //ensure cascade delete
 
             db.BComments.Remove(comment);
             db.Entry(comment).State = EntityState.Deleted;
 
-            await db.SaveChangesAsync();
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                //something
+            }
+            await RemoveCompanyNotification("broadcast-comments", bId);
 
             return StatusCode(HttpStatusCode.NoContent);
         }
@@ -329,7 +327,9 @@ namespace WorldWebMall.Controllers
             {
                 return NotFound();
             }
+
             
+
             return Ok(result);
         }
 
@@ -357,19 +357,9 @@ namespace WorldWebMall.Controllers
                 time = DateTime.UtcNow
             });
             
-            CompanyNotification notification = new CompanyNotification()
-            {
-                BroadcastId = id,
-                time = DateTime.UtcNow,
-                type = "comment",
-                seen = false,
-                CustomerId = UserId,
-                CompanyId = broad.CompanyId
-            };
-
-            db.CompanyNotifications.Add(notification);
+           
             db.Entry(broad).State = EntityState.Modified;
-            db.Entry(notification).State = EntityState.Added;
+            
 
             try
             {
@@ -388,6 +378,7 @@ namespace WorldWebMall.Controllers
                 }
             }
 
+            await CreateCustomerNotification("broadcast-comments", id, broad.CompanyId);
             return Ok(comment.comment);
         }
 
@@ -407,6 +398,86 @@ namespace WorldWebMall.Controllers
             return Ok(result);
         }
 
+        [Route("comment-on-company")]
+        public async Task<IHttpActionResult> PutCommentC(string id, CommentDTO comment)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            Company company = await db.Companies.FindAsync(id);
+            if (company == null || id != company.CompanyId)
+            {
+                return BadRequest();
+            }
+
+            string UserId = User.Identity.GetUserId();
+            company.CComments.Add(new CComment
+            {
+                CustomerId = UserId,
+                CompanyId = id,
+                comment = comment.comment,
+                time = DateTime.UtcNow
+            });
+            
+
+            db.Entry(company).State = EntityState.Modified;
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                //read on what to put there
+                /**if (!(id))
+                {
+                    return NotFound();
+                }
+                else*/
+                {
+                    throw;
+                }
+            }
+
+            await CreateCompanyNotification("company-comments", 0, id);
+
+            return Ok(comment.comment);
+        }
+
+        [Route("delete-comment-on-company")]
+        public async Task<IHttpActionResult> DeleteComment(int id)
+        {
+            CComment comment = await db.CComments.FindAsync(id);
+            if (comment == null)
+            {
+                return NotFound();
+            }
+
+            //Ensure that the person deleting is either the owner of the comment
+            string UserId = User.Identity.GetUserId();
+            if (comment.CustomerId != UserId)
+            {
+                return StatusCode(HttpStatusCode.Unauthorized);
+            }
+            string cId = comment.CompanyId;
+            //ensure cascade delete
+            
+            db.CComments.Remove(comment);
+            db.Entry(comment).State = EntityState.Deleted;
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                //something
+            }
+            await RemoveCompanyNotification("company-comments", 0, cId);
+
+            return StatusCode(HttpStatusCode.NoContent);
+        }
         //Search for broadcasts
 
         /**
@@ -745,19 +816,7 @@ namespace WorldWebMall.Controllers
                 AdvertId = id,
                 time = DateTime.UtcNow
             });
-
-            CustomerNotification notification = new CustomerNotification()
-            {
-                AdvertId = id,
-                time = DateTime.UtcNow,
-                type = "like",
-                seen = false,
-                UserId = UserId,
-                CustomerId = advert.CustomerId
-            };
-
-            db.CustomerNotifications.Add(notification);
-            db.Entry(notification).State = EntityState.Added;
+            
             db.Entry(advert).State = EntityState.Modified;
 
             try
@@ -776,7 +835,8 @@ namespace WorldWebMall.Controllers
                     throw;
                 }
             }
-
+            if (UserId != advert.CustomerId)
+                await CreateCustomerNotification("advert-likes", id, advert.CustomerId);
             return StatusCode(HttpStatusCode.Created);
         }
 
@@ -804,19 +864,10 @@ namespace WorldWebMall.Controllers
                 time = DateTime.UtcNow
             });
 
-            CustomerNotification notification = new CustomerNotification()
-            {
-                AdvertId = id,
-                type = "comment",
-                seen = false,
-                UserId = UserId,
-                time = DateTime.Now,
-                CustomerId = advert.CustomerId
-            };
 
-            db.CustomerNotifications.Add(notification);
+            
+            
             db.Entry(advert).State = EntityState.Modified;
-            db.Entry(notification).State = EntityState.Added;
 
             try
             {
@@ -834,7 +885,8 @@ namespace WorldWebMall.Controllers
                     throw;
                 }
             }
-
+            if (UserId != advert.CustomerId)
+                await CreateCustomerNotification("advert-comments", id, advert.CustomerId);
             return Ok(comment.comment);
         }
 
@@ -855,13 +907,21 @@ namespace WorldWebMall.Controllers
             {
                 return StatusCode(HttpStatusCode.Unauthorized);
             }
-
+            int adId = like.AdvertId;
             //ensure cascade delete
 
             db.ALikes.Remove(like);
             db.Entry(like).State = EntityState.Deleted;
-            await db.SaveChangesAsync();
-
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                //something
+            }
+            if (UserId != like.CustomerId)
+                await RemoveCustomerNotification("advert-likes", adId);
             return StatusCode(HttpStatusCode.NoContent);
         }
 
@@ -883,12 +943,19 @@ namespace WorldWebMall.Controllers
             }
 
             //ensure cascade delete
-
+            int adId = comment.AdvertId;
             db.AComments.Remove(comment);
             db.Entry(comment).State = EntityState.Deleted;
-
-            await db.SaveChangesAsync();
-
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                //something
+            }
+            if (UserId != comment.CustomerId)
+                await RemoveCustomerNotification("advert-comments", adId);
             return StatusCode(HttpStatusCode.NoContent);
         }
 
@@ -917,11 +984,6 @@ namespace WorldWebMall.Controllers
         [ResponseType(typeof(IQueryable<AdLike>))]
         public IHttpActionResult GetALikes(int id, int page, int amount)
         {
-            /*
-            var result = db.Adverts.Where(b => b.Id == adId)
-                        .Select(c => c.ALikes.OrderBy(a => a.time).Skip(amount * (page - 1)).Take(amount))
-                            .Project().To<AdLike>();
-             */
             var result = db.ALikes.Where(c => c.AdvertId == id)
                             .OrderBy(a => a.time).Skip(amount * (page - 1)).Take(amount)
                             .Project().To<AdLike>();
@@ -1132,12 +1194,7 @@ namespace WorldWebMall.Controllers
                 return BadRequest();
             }
             string UserId = User.Identity.GetUserId();
-            /*
-            IQueryable<CompanyDTO> result =  db.Customers.Where(a => a.CustomerId == UserId)
-                                    .Select(c => c.Followings.OrderBy(o => o.Followers.Count())
-                                    .Skip(amount * (page - 1)).Take(amount))
-                                    .Project().To<CompanyDTO>();
-            */
+           
 
             IQueryable<CompanyDTO> result = db.Companies.Where(a => a.Followers.Where(c => c.CustomerId == UserId).Count() != 0)
                                         .OrderBy(o => o.Followers.Count()).Skip(amount * (page - 1)).Take(amount)
@@ -1151,7 +1208,7 @@ namespace WorldWebMall.Controllers
         }
 
         [Route("follow-company")]
-        public async Task<IHttpActionResult> PutFollow(string id)
+        public async Task<IHttpActionResult> PutFollow(string id, int prev = 10 )
         {
             if (!ModelState.IsValid)
             {
@@ -1161,17 +1218,24 @@ namespace WorldWebMall.Controllers
 
             Company company = await db.Companies.FindAsync(id);
             Customer customer = await db.Customers.FindAsync(UserId);
-            var duplicate = db.Companies.Where(a => a.CompanyId == id)
-                            .Select(c => c.Followers.Any(a => a.CustomerId == UserId)).FirstOrDefault();
-         
+
+            var duplicate = db.Followings.Find(id, UserId) != null ? true : false; 
     
             if(duplicate)
             {
                 return StatusCode(HttpStatusCode.Conflict);
             }
 
-            await db.Broadcasts.Where(a => a.CompanyId == id).Take(10).ForEachAsync(c => c.Customers.Add(customer));
-            company.Followers.Add(customer);
+            await db.Broadcasts.Where(a => a.CompanyId == id).Take(prev).ForEachAsync(c => c.Customers.Add(customer));
+            Followings follow = new Followings()
+            {
+                CompanyId = id,
+                CustomerId = UserId,
+                time = DateTime.UtcNow
+            };
+            
+            company.Followers.Add(follow);
+            db.Entry(follow).State = EntityState.Added;
             db.Entry(company).State = EntityState.Modified;
             try
             {
@@ -1182,8 +1246,40 @@ namespace WorldWebMall.Controllers
             {
                 return StatusCode(HttpStatusCode.InternalServerError); 
             }
+            await CreateCompanyNotification("company-followings", 0 , id);
             
             return StatusCode(HttpStatusCode.Created);
+        }
+
+        [Route("unfollow-company")]
+        public async Task<IHttpActionResult> DeleteFollow(string id)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+            string UserId = User.Identity.GetUserId();
+
+            var follow = await db.Followings.FindAsync(id, UserId);
+
+            if (follow == null)
+            {
+                return StatusCode(HttpStatusCode.NotFound);
+            }
+            db.Followings.Remove(follow);
+            db.Entry(follow).State = EntityState.Deleted;
+            
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return StatusCode(HttpStatusCode.InternalServerError);
+            }
+            await RemoveCompanyNotification("company-followings", 0, id);
+
+            return StatusCode(HttpStatusCode.NoContent);
         }
         
 
@@ -1348,11 +1444,31 @@ namespace WorldWebMall.Controllers
         public IHttpActionResult GetNotifications(int amount, int page)
         {
             string UserId = User.Identity.GetUserId();
-            var result = db.CustomerNotifications.Where(c => c.CustomerId == UserId)
+            var result = db.CustomerNotifications.Where(c => c.CustomerId == UserId).OrderBy(a => a.last)
                             .Skip(amount * (page - 1)).Take(amount)
-                            .Project().To<Notification>();
+                            .Project().To<Notification>().ToList();
+            
+            foreach (var x in result)
+            {
+                x.customers = GetNotificationCustomers(x.ContentId, x.first, x.date, x.type).ToList();
+            }
 
             if (result == null)
+            {
+                return StatusCode(HttpStatusCode.NoContent);
+            }
+
+            return Ok(result);
+        }
+
+        [Route("get-number-of-notification")]
+        [ResponseType(typeof(int))]
+        public IHttpActionResult GetNumNotifications()
+        {
+            string UserId = User.Identity.GetUserId();
+            var result = db.CustomerNotifications.Where(c => c.CustomerId == UserId && c.seen == false).Count();
+
+            if (result == 0)
             {
                 return StatusCode(HttpStatusCode.NoContent);
             }
@@ -1405,24 +1521,6 @@ namespace WorldWebMall.Controllers
 
             return StatusCode(HttpStatusCode.NoContent);
         }
-
-        //get the notified object
-        [Route("go-to-notification")]
-        [ResponseType(typeof(Advertisement))]
-        public IHttpActionResult GetNotifications(int id)
-        {
-            var result = db.CustomerNotifications.Where(c => c.Id == id)
-                            .Select(a => a.Advert).Project().To<Advertisement>();
-
-            if (result == null)
-            {
-                return NotFound();
-            }
-            return Ok(result);
-        }
-
-
-        
         
         private bool CustomerExists(string id)
         {
@@ -1432,6 +1530,179 @@ namespace WorldWebMall.Controllers
         private bool AdvertExists(int id)
         {
             return db.Adverts.Count(e => e.Id == id) > 0;
+        }
+
+        private async Task<bool> CreateCustomerNotification(string type, int id, string ReceiverId)
+        {
+            CustomerNotification notification = null;
+            string UserId = User.Identity.GetUserId();
+            Customer customer = await db.Customers.FindAsync(UserId);
+            notification = await db.CustomerNotifications.Where(c => c.ContentId == id && c.seen == false && c.type == type).FirstOrDefaultAsync();
+
+            if (notification == null)
+            {
+                notification = new CustomerNotification()
+                {
+                    ContentId = id,
+                    type = type,
+                    seen = false,
+                    first = DateTime.UtcNow.AddSeconds(-1.0),
+                    last = DateTime.UtcNow.AddSeconds(1.0),
+                    CustomerId = ReceiverId
+                };
+                db.Entry(notification).State = EntityState.Added;
+                db.CustomerNotifications.Add(notification);
+            }
+            else
+            {
+                notification.last = DateTime.UtcNow.AddSeconds(1.0);
+                db.Entry(notification).State = EntityState.Modified;
+            }
+            
+            
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private async Task<bool> CreateCompanyNotification(string type, int id, string ReceiverId)
+        {
+            CompanyNotification notification = null;
+            //Check for cost of putting many where parameters. since this is executed on a number of actions
+            //Check if order of the where query makes a difference in terms of performance
+            notification = await db.CompanyNotifications.Where(c => c.ContentId == id && c.CompanyId == ReceiverId && c.seen == false && c.type == type).FirstOrDefaultAsync();
+
+            if (notification == null)
+            {
+                notification = new CompanyNotification()
+                {
+                    ContentId = id,
+                    type = type,
+                    seen = false,
+                    first = DateTime.UtcNow.AddSeconds(-1.0),
+                    last = DateTime.UtcNow.AddSeconds(1.0),
+                    CompanyId = ReceiverId
+                };
+                db.Entry(notification).State = EntityState.Added;
+                db.CompanyNotifications.Add(notification);
+            }
+            else
+            {
+                notification.last = DateTime.UtcNow.AddSeconds(1.0);
+                db.Entry(notification).State = EntityState.Modified;
+            }
+            
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private IQueryable<CustomerDTO> GetNotificationCustomers(int id, DateTime first, DateTime last, string type, string ID = null)
+        {
+            IQueryable<CustomerDTO> result = null;
+            switch (type)
+            {
+                case "advert-likes":
+                    result = db.ALikes.Where(c => c.AdvertId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "advert-comments":
+                    result = db.AComments.Where(c => c.AdvertId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "broadcast-likes":
+                    result = db.BLikes.Where(c => c.BroadcastId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "broadcast-comments":
+                    result = db.BComments.Where(c => c.BroadcastId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "company-comments"://need to find a way for the ids
+                    result = db.CComments.Where(c => c.CompanyId == ID && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "company-followings":
+                    result = db.Followings.Where(c => c.CompanyId == ID && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+            }
+            return result;
+        }
+
+        private async Task<bool> RemoveCustomerNotification(string type, int id)
+        {
+            
+            var notification = await db.CustomerNotifications.Where(x => x.ContentId == id && x.seen == false && x.type == type).FirstOrDefaultAsync();
+
+            int result = 0;
+            switch (type)
+            {
+                case "advert-likes":
+                    result = db.ALikes.Where(c => c.AdvertId == id && c.time >= notification.first).Count();
+                    break;
+                case "advert-comments":
+                    result = db.AComments.Where(c => c.AdvertId == id && c.time >= notification.first).Count();
+                    break;
+            }
+            if (result == 0)
+            {
+                db.CustomerNotifications.Remove(notification);
+                db.Entry(notification).State = EntityState.Deleted;
+            }
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
+        }
+
+        private async Task<bool> RemoveCompanyNotification(string type, int id, string ID = null)
+        {
+            var notification = await db.CustomerNotifications.Where(x => x.ContentId == id && x.seen == false && x.type == type).FirstOrDefaultAsync();
+
+            int result = 0;
+            switch (type)
+            {
+                case "broadcast-likes":
+                    result = db.BLikes.Where(c => c.BroadcastId == id && c.time >= notification.first).Count();
+                    break;
+                case "broadcast-comments":
+                    result = db.BComments.Where(c => c.BroadcastId == id && c.time >= notification.first).Count();
+                    break;
+                case "company-comments"://need to find a way for the ids
+                    result = db.CComments.Where(c => c.CompanyId == ID && c.time >= notification.first).Count();
+                    break;
+                case "company-followings":
+                    result = db.Followings.Where(c => c.CompanyId == ID && c.time >= notification.first).Count();
+                    break;
+            }
+            if (result == 0)
+            {
+                db.CustomerNotifications.Remove(notification);
+                db.Entry(notification).State = EntityState.Deleted;
+            }
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

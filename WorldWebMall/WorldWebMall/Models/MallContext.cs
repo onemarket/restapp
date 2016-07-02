@@ -38,6 +38,7 @@ namespace WorldWebMall.Models
         public System.Data.Entity.DbSet<WorldWebMall.Models.CompanyNotification> CompanyNotifications { get; set; }
         public System.Data.Entity.DbSet<WorldWebMall.Models.Picture> Pictures { get; set; }
         public System.Data.Entity.DbSet<WorldWebMall.Models.CustomerNotification> CustomerNotifications { get; set; }
+        public System.Data.Entity.DbSet<WorldWebMall.Models.Followings> Followings { get; set; }
         public System.Data.Entity.DbSet<WorldWebMall.Models.Friend> Friends { get; set; }
         public System.Data.Entity.DbSet<WorldWebMall.Models.Request> Requests { get; set; }
         public System.Data.Entity.DbSet<WorldWebMall.Models.ContactNumber> ContactNumbers { get; set; }

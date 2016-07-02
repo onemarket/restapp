@@ -24,9 +24,9 @@ namespace WorldWebMall.Models
     {
         public Customer()
         {
-            this.Broadcasts = new HashSet<Broadcast>();
+            //this.Broadcasts = new HashSet<Broadcast>();
             this.Adverts = new HashSet<Advert>();
-            this.Followings = new HashSet<Company>();
+            this.Followings = new HashSet<Followings>();
         }
         [Key]
         public string CustomerId { get; set; }
@@ -39,26 +39,19 @@ namespace WorldWebMall.Models
         public int num_friends { get; set; }
         public int active_ads { get; set; }
         public DateTime? dob { get; set; }
+        //public int Variable { get; set; }
 
         //put address here
         public virtual CustomerAddress CustomerAddress { get; set; }
         public virtual Picture p_pic { get; set; }
+        public virtual Picture wallpaper { get; set; }
 
-        public virtual ICollection<Broadcast> Broadcasts { get; set; }
+        //The broadcast <=> customer correspondance checked in the broadcast table
+        //public virtual ICollection<Broadcast> Broadcasts { get; set; }
         
         
-        /*public IList<BroadcastDTO> Bdto
-        {
-            get
-            {
-                IList<BroadcastDTO> list = new List<BroadcastDTO>();
-                foreach (var c in Broadcasts.OrderBy)
-                    list.Add(Mapper.Map<BroadcastDTO>(c));
-                return list;
-            }
-        }
-         */
-        public virtual ICollection<Company> Followings { get; set; }
+        
+        public virtual ICollection<Followings> Followings { get; set; }
         public virtual ICollection<Advert> Adverts { get; set; }
     }
 
@@ -77,21 +70,31 @@ namespace WorldWebMall.Models
         
     }
 
+    //Followings table used instead of one to many rel because of the need to take note of the follow date for notification 
+    //and record keeping purposes
+    public class Followings
+    {
+        [ForeignKey("Company"), Key, Column(Order = 1)]
+        public string CompanyId { get; set; }
+        [ForeignKey("Customer"), Key, Column(Order = 2)]
+        public string CustomerId { get; set; }
+        public DateTime time { get; set; }
+
+        public virtual Company Company { get; set; }
+        public virtual Customer Customer { get; set; }
+    }
+
     //customers only get notifications form the adverts they would have posted
     public class CustomerNotification
     {
         [Key]
         public int Id { get; set; }
         public string CustomerId { get; set; }
-        public string type { get; set; }
+        public int ContentId { get; set; }
         public bool seen { get; set; }
-        public int AdvertId { get; set; }
-        public string UserId { get; set; }
-        public DateTime time { get; set; }
-
-        [ForeignKey("UserId")]
-        public virtual Customer User { get; set; }
-        public virtual Advert Advert { get; set; }
+        public DateTime first { get; set; }
+        public DateTime last { get; set; }
+        public string type { get; set; }//whether its a comment or a like
     }
 
     public class Request

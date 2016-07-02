@@ -43,6 +43,7 @@ namespace WorldWebMall.App_Start
             return null;
         }
 
+      
         public static void ConfigureMapping()
         {
         
@@ -95,12 +96,18 @@ namespace WorldWebMall.App_Start
                 .ForMember(a => a.website, opt => opt.MapFrom(c => c.website))
                 .ForMember(a => a.profile_pic, opt => opt.MapFrom(c => c.p_pic))
                 .ForMember(a => a.overview, opt => opt.MapFrom(c => c.description))
+                .ForMember(a => a.workinghours, opt => opt.MapFrom(c => c.workingHours))
                 .ForMember(a => a.regDate, opt => opt.MapFrom(c => c.registrationDate))
                 .ForMember(a => a.color, opt => opt.MapFrom(c => c.substription == "premium" ? c.theme : "default"))
                 .ForMember(a => a.number_of_followers, opt => opt.MapFrom(c => c.Followers.Count()));
                 //because of possible concurrent write, number_of_followers is better off calculated
                 //more than one user can possibly click the follow button at close enough time to cause
                 //error. However not sure if this is well taken of by EF
+
+
+            //Mapper.CreateMap<string, Working>()
+                //.ForMember(a => a.hours, opt => opt.MapFrom(c => c));
+            
 
             Mapper.CreateMap<Broadcast, BroadcastDTO>()
                 .ForMember(a => a.ID, opt => opt.MapFrom(c => c.BroadcastId))
@@ -117,9 +124,6 @@ namespace WorldWebMall.App_Start
                 .ForMember(a => a.images, opt => opt.MapFrom(c => c.pictures))
                 .ForMember(a => a.company, opt => opt.MapFrom(c => c.Company));
 
-
-            Mapper.CreateMap<Customer, Feeds>()
-                .ForMember(a => a.feeds, opt => opt.MapFrom(c => c.Broadcasts));
 
             Mapper.CreateMap<Category, Suggestions>()
                 .ForMember(a => a.suggestions, opt => opt.MapFrom(c => c.companys.OrderBy(x =>x.Followers.Count())));
@@ -150,6 +154,7 @@ namespace WorldWebMall.App_Start
                 .ForMember(a => a.name, opt => opt.Condition(c => c.name != null))
                 .ForMember(a => a.website, opt => opt.Condition(c => c.website != null))
                 .ForMember(a => a.theme, opt => opt.Condition(c => c.color != null))
+                .ForMember(a => a.workingHours, opt => opt.MapFrom(c => c.workinghours != null ? c.workinghours.ToString() : null ))
                 .ForMember(a => a.description, opt => opt.Condition(c => c.overview != null));
 
             Mapper.CreateMap<ContactDTO, ContactNumber>()
@@ -242,24 +247,22 @@ namespace WorldWebMall.App_Start
                 .ForMember(a => a.info, opt => opt.MapFrom(c => c.details))
                 .ForMember(a => a.points, opt => opt.MapFrom(c => 0))
                 .ForMember(a => a.time, opt => opt.MapFrom(c => DateTime.UtcNow))
-                .ForMember(a => a.title, opt => opt.MapFrom(c => c.title));                
+                .ForMember(a => a.title, opt => opt.MapFrom(c => c.title));
 
             Mapper.CreateMap<CustomerNotification, Notification>()
-                .ForMember(a => a.Id, opt => opt.MapFrom(c => c.Id))
+                .ForMember(a => a.ID, opt => opt.MapFrom(c => c.Id))
                 .ForMember(a => a.seen, opt => opt.MapFrom(c => c.seen))
-                .ForMember(a => a.customer, opt => opt.MapFrom(c => c.User))
-                .ForMember(a => a.minutes, opt => opt.MapFrom(c => DbFunctions.DiffMinutes(c.time, DateTime.UtcNow) > 60 ? 0 : DbFunctions.DiffMinutes(c.time, DateTime.UtcNow)))
-                .ForMember(a => a.hours, opt => opt.MapFrom(c => DbFunctions.DiffHours(c.time, DateTime.UtcNow) > 24 ? 0 : DbFunctions.DiffHours(c.time, DateTime.UtcNow)))
-                .ForMember(a => a.date, opt => opt.MapFrom(c => c.time))
+                .ForMember(a => a.minutes, opt => opt.MapFrom(c => DbFunctions.DiffMinutes(c.last, DateTime.UtcNow) > 60 ? 0 : DbFunctions.DiffMinutes(c.last, DateTime.UtcNow)))
+                .ForMember(a => a.hours, opt => opt.MapFrom(c => DbFunctions.DiffHours(c.last, DateTime.UtcNow) > 24 ? 0 : DbFunctions.DiffHours(c.last, DateTime.UtcNow)))
+                .ForMember(a => a.date, opt => opt.MapFrom(c => c.last))
                 .ForMember(a => a.type, opt => opt.MapFrom(c => c.type));
 
             Mapper.CreateMap<CompanyNotification, Notification>()
-                .ForMember(a => a.Id, opt => opt.MapFrom(c => c.Id))
+                .ForMember(a => a.ID, opt => opt.MapFrom(c => c.Id))
                 .ForMember(a => a.seen, opt => opt.MapFrom(c => c.seen))
-                .ForMember(a => a.customer, opt => opt.MapFrom(c => c.Customer))
-                .ForMember(a => a.minutes, opt => opt.MapFrom(c => DbFunctions.DiffMinutes(c.time, DateTime.UtcNow) > 60 ? 0 : DbFunctions.DiffMinutes(c.time, DateTime.UtcNow)))
-                .ForMember(a => a.hours, opt => opt.MapFrom(c => DbFunctions.DiffHours(c.time, DateTime.UtcNow) > 24 ? 0 : DbFunctions.DiffHours(c.time, DateTime.UtcNow)))
-                .ForMember(a => a.date, opt => opt.MapFrom(c => c.time))
+                .ForMember(a => a.minutes, opt => opt.MapFrom(c => DbFunctions.DiffMinutes(c.last, DateTime.UtcNow) > 60 ? 0 : DbFunctions.DiffMinutes(c.last, DateTime.UtcNow)))
+                .ForMember(a => a.hours, opt => opt.MapFrom(c => DbFunctions.DiffHours(c.last, DateTime.UtcNow) > 24 ? 0 : DbFunctions.DiffHours(c.last, DateTime.UtcNow)))
+                .ForMember(a => a.date, opt => opt.MapFrom(c => c.last))
                 .ForMember(a => a.type, opt => opt.MapFrom(c => c.type));
 
             Mapper.CreateMap<Request, FriendRequest>()

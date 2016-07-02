@@ -13,7 +13,8 @@ namespace WorldWebMall.App_Start
     {
         public static void RolesSetup()
         {
-            initialiseRoles();
+
+            initialiseRoles(); 
         }
 
         private static void initialiseRoles()

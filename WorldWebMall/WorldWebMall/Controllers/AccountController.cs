@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
+using System.Web.Http.Description;
 using System.Web.Http.ModelBinding;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
@@ -325,10 +326,10 @@ namespace WorldWebMall.Controllers
 
         //Check best implementation method
         private MallContext db = new MallContext();
-        // POST api/Account/Register
+        // POST api/Account/Register/Customer
         [AllowAnonymous]
-        [Route("Register")]
-        public async Task<IHttpActionResult> Register(RegisterBindingModel model)
+        [Route("Register/Customer")]
+        public async Task<IHttpActionResult> RegisterCustomer(RegisterBindingModel model)
         {
             
             if (!ModelState.IsValid)
@@ -351,7 +352,7 @@ namespace WorldWebMall.Controllers
                 return GetErrorResult(result);
             }
             var currentUser = UserManager.FindByName(user.UserName);
-            currentUser.FacebookToken = "pakaipa";
+            currentUser.FacebookToken = "";
             currentUser.TwitterToken = "";
             currentUser.LinkedInToken = "";
             currentUser.FBPageId = "";
@@ -376,11 +377,53 @@ namespace WorldWebMall.Controllers
                     throw;
                 }
             }
-            else if (model.type.ToLower() == "company")
+            else
+            {
+                //return error
+                return BadRequest("Account Type Customer is expected for this model");
+            }
+            return Ok();
+        }
+
+        // POST api/Account/Register/Company
+        [AllowAnonymous]
+        [Route("Register/Company")]
+        public async Task<IHttpActionResult> RegisterCompany(RegisterBindingCompanyModel model)
+        {
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if (!ValidRoles.Contains(model.type.ToLower()))
+            {
+                return BadRequest("Invalid Account Type");
+            }
+
+            var user = new ApplicationUser() { UserName = model.Email, Email = model.Email };
+
+            //might want to create the identity after adding the data into the other table
+            IdentityResult result = await UserManager.CreateAsync(user, model.Password);
+
+            if (!result.Succeeded)
+            {
+                return GetErrorResult(result);
+            }
+            var currentUser = UserManager.FindByName(user.UserName);
+            currentUser.FacebookToken = "";
+            currentUser.TwitterToken = "";
+            currentUser.LinkedInToken = "";
+            currentUser.FBPageId = "";
+            //check the role that would have been sent
+
+            await UserManager.AddToRoleAsync(currentUser.Id, model.type.ToLower());
+           
+            if (model.type.ToLower() == "company")
             {
                 Company company = new Company();
                 company.CompanyId = currentUser.Id;
-                company.name = model.fname;
+                company.name = model.name;
                 company.registrationDate = DateTime.UtcNow;
                 company.substription = "premium";
 
@@ -394,6 +437,11 @@ namespace WorldWebMall.Controllers
                 {
                     throw;
                 }
+            }
+            else
+            {
+                //return error
+                return BadRequest("Account Type Company is expected for this model");
             }
             return Ok();
         }

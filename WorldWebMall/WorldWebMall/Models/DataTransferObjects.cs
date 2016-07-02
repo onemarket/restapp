@@ -6,6 +6,7 @@ using System.Globalization;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity.Spatial;
+using Newtonsoft.Json;
 
 namespace WorldWebMall.Models
 {
@@ -124,7 +125,10 @@ namespace WorldWebMall.Models
         public DateTime? regDate { get; set; }
         public string overview { get; set; }
         public string color { get; set; }
-        //public ICollection<CompanyComment> comments { get; set; }
+        [JsonIgnore]
+        public string workinghours { get; set; }
+        public WorkingHours work { get { return workinghours != null ? new WorkingHours().Convert(workinghours) : null; } }
+       
         public ICollection<CompanyAddress> addresses { get; set; }
         public ICollection<CategoryDTO> category { get; set; }
         public ICollection<ContactDTO> contacts { get; set; }
@@ -155,6 +159,7 @@ namespace WorldWebMall.Models
         public string website { get; set; }
         public string overview { get; set; }
         public string color { get; set; }
+        public WorkingHours workinghours { get; set; }
 
         public ICollection<ContactDTO> contacts { get; set; }
         public ICollection<string> categories { get; set; }
@@ -256,13 +261,16 @@ namespace WorldWebMall.Models
 
     public class Notification
     {
-        public int Id { get; set; }
+        public int ID { get; set; }
+        public int ContentId { get; set; }
         public string type { get; set; }
-        public UserDTO customer { get; set; }
         public bool seen { get; set; }
         public int? minutes { get; set; }
         public int? hours { get; set; }
         public DateTime date { get; set; }
+        [JsonIgnore]
+        public DateTime first { get; set; }
+        public ICollection<CustomerDTO> customers { get; set; }
     }
 
     public class FriendRequest
@@ -302,4 +310,61 @@ namespace WorldWebMall.Models
         public string category { get; set; }
         public ICollection<CompanyDTO> Companies { get; set; }
     }
+
+    public class WorkingHours
+    {
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string sunday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string monday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string tuesday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string wednesday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string thursday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string friday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string saturday { get; set; }
+        [Required]
+        [RegularExpression(@"^[0-2][0-9][0-5][0-9][-][0-2][0-9][0-5][0-9]|(closed)|(all\sday)$", ErrorMessage = "Invalid working hours provided")]
+        public string public_holiday { get; set; }
+
+        public override string ToString()
+        {
+            return sunday + ":" + monday + ":" + tuesday + ":" + wednesday + ":" + thursday + ":" + friday + ":" + saturday + ":" + public_holiday;
+        }
+
+        public WorkingHours Convert(string working)
+        {
+            string[] hours = working.Split(':');
+            this.sunday = hours[0]; this.monday = hours[1]; this.tuesday = hours[2]; this.wednesday = hours[3];
+            this.thursday = hours[4]; this.friday = hours[5]; this.saturday = hours[6]; this.public_holiday = hours[7];
+
+            return this;
+        }
+    }
+
+    public class Working
+    {
+        public string hours { get; set; }
+        //public string[] array { get { return hours.Split(':'); } }
+        //public string sunday { get { return array[0]; } }
+        //public string monday { get { return array[1]; } }
+        //public string tuesday { get { return array[2]; } }
+        //public string wednesday { get { return array[3]; } }
+        //public string thursday { get { return array[4]; } }
+        //public string friday { get { return array[5]; } }
+        //public string saturday { get { return array[6]; } }
+        //public string public_holiday { get { return array[7]; } }
+    }
+    
 }

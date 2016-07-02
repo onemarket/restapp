@@ -16,7 +16,7 @@ namespace WorldWebMall.Models
             this.CComments = new HashSet<CComment>();
             //contains a list of the categories that the company deals with
             this.Categorys = new HashSet<Category>();
-            this.Followers = new HashSet<Customer>();
+            this.Followers = new HashSet<Followings>();
             //contains all the broadcasts the company has made
             this.Broadcasts = new HashSet<Broadcast>();
             //contains the address of the company incase it has different locations
@@ -32,6 +32,8 @@ namespace WorldWebMall.Models
         public string description { get; set; }
         public string theme { get; set; }
 
+        public string workingHours { get; set; }
+
         //what services the company paid for
         public string substription { get; set; }
 
@@ -41,14 +43,9 @@ namespace WorldWebMall.Models
         public virtual ICollection<CompanyAddress> CompanyAddresses { get; set; }
         public virtual ICollection<CComment> CComments { get; set; }
         public virtual HashSet<Category> Categorys { get; set; }
-        public virtual ICollection<Customer> Followers { get; set; }
+        public virtual ICollection<Followings> Followers { get; set; }
         public virtual ICollection<Broadcast> Broadcasts { get; set; }
         public virtual ICollection<ContactNumber> Contacts { get; set; }
-
-        //[NotMapped]
-        //public virtual ICollection<string> FollowersId { get { return Followers.Select(c => c.CustomerId).ToList(); } }
-
-
     }
 
     public class ContactNumber
@@ -82,20 +79,11 @@ namespace WorldWebMall.Models
         [Key]
         public int Id { get; set; }
         public string CompanyId { get; set; }
-        public int BroadcastId { get; set; }
+        public int ContentId { get; set; }
         public bool seen { get; set; }
-        public DateTime time { get; set; }
+        public DateTime first { get; set; }
+        public DateTime last { get; set; }
         public string type { get; set; }//whether its a comment or a like
-
-        /**for the customer who would have commented on either the broadcast or
-         * the company profile.
-         * If the Broadcast object is empty then the customer has commented on the 
-         * company profile and should be directed there
-         */
-        public string CustomerId { get; set; }
-
-        public virtual Customer Customer { get; set; }
-        public virtual Broadcast Broadcast { get; set; }
     }
 
 

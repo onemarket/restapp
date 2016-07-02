@@ -23,8 +23,9 @@ namespace WorldWebMall
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
             Database.SetInitializer<MallContext>(new DropCreateDatabaseIfModelChanges<MallContext>());
-            //Database.SetInitializer<ApplicationDbContext>(new ApplicationDbInitializer());
-            Database.SetInitializer<ApplicationDbContext>(null);
+            //using this one instead of the commented out (null) solved "Invalid object name dbo.AspNet***" error
+            Database.SetInitializer<ApplicationDbContext>(new ApplicationDbInitializer());
+            //Database.SetInitializer<ApplicationDbContext>(null);
             Roles.RolesSetup();
             MapperConfig.Configure();
             GlobalConfiguration.Configuration.Formatters.JsonFormatter

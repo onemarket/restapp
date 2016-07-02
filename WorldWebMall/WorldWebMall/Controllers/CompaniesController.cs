@@ -136,7 +136,6 @@ namespace WorldWebMall.Controllers
             }
 
             string UserId = User.Identity.GetUserId();
-            //broadcast.companyId = UserId;
             Broadcast bd = Mapper.Map<Broadcast>(broadcast);
             bd.CompanyId = UserId;
 
@@ -153,16 +152,16 @@ namespace WorldWebMall.Controllers
                 }
             }
             
-            ICollection<Customer> cust = db.Companies.Where(a => a.CompanyId == UserId).Select(c => c.Followers)
-                                        .FirstOrDefault().ToList();
+            var cust = db.Followings.Where(c => c.CompanyId == UserId).Select(a => a.Customer).ToList();
             bd.Customers = cust;
             db.Broadcasts.Add(bd);
-           
-            foreach (Customer c in cust)
+            /** Dont need this since the broadcast <=> customer relation is being tracked in the broadcast table
+            foreach (string x in cust)
             {
-                await db.Customers.Where(a => a.CustomerId == c.CustomerId).ForEachAsync(o => o.Broadcasts.Add(bd));
+                //add the broadcast to the customer's list of broadcasts
+                await db.Customers.Where(a => a.CustomerId == x).ForEachAsync(o => o.Broadcasts.Add(bd));
             }
-            
+            */
             db.Entry(bd).State = EntityState.Added;
 
             try
@@ -524,11 +523,31 @@ namespace WorldWebMall.Controllers
         public IHttpActionResult GetNotifications(int amount, int page)
         {
             string UserId = User.Identity.GetUserId();
-            var result = db.CompanyNotifications.Where(c => c.CompanyId == UserId)
-                            .OrderBy(a => a.time).Skip(amount * (page - 1)).Take(amount)
-                            .Project().To<Notification>();
-            
-            if (result.Count() == 0)
+            var result = db.CompanyNotifications.Where(c => c.CompanyId == UserId).OrderBy(a => a.last)
+                            .Skip(amount * (page - 1)).Take(amount)
+                            .Project().To<Notification>().ToList();
+
+            foreach (var x in result)
+            {
+                x.customers = GetNotificationCustomers(x.ContentId, x.first, x.date, x.type, UserId).ToList();
+            }
+
+            if (result == null)
+            {
+                return StatusCode(HttpStatusCode.NoContent);
+            }
+
+            return Ok(result);
+        }
+
+        [Route("get-number-of-notification")]
+        [ResponseType(typeof(int))]
+        public IHttpActionResult GetNumNotifications()
+        {
+            string UserId = User.Identity.GetUserId();
+            var result = db.CompanyNotifications.Where(c => c.CompanyId == UserId && c.seen == false).Count();
+
+            if (result == 0)
             {
                 return StatusCode(HttpStatusCode.NoContent);
             }
@@ -586,8 +605,8 @@ namespace WorldWebMall.Controllers
         [ResponseType(typeof(IQueryable<BroadcastDTO>))]
         public IHttpActionResult GetNotification(int id)
         {
-            var result = db.CompanyNotifications.Where(c => c.Id == id).Select(a => a.Broadcast)
-                            .Project().To<BroadcastDTO>();
+            var result = db.CompanyNotifications.Where(c => c.Id == id);//.Select(a => a.Broadcast)
+                            //.Project().To<BroadcastDTO>();
 
             if (result == null)
             {
@@ -609,6 +628,34 @@ namespace WorldWebMall.Controllers
         private bool CompanyExists(string id)
         {
             return db.Companies.Count(e => e.CompanyId == id) > 0;
+        }
+
+        //put method in separate class maybe. Where it can be accessed by both
+        private IQueryable<CustomerDTO> GetNotificationCustomers(int id, DateTime first, DateTime last, string type, string ID = null)
+        {
+            IQueryable<CustomerDTO> result = null;
+            switch (type)
+            {
+                case "advert-likes":
+                    result = db.ALikes.Where(c => c.AdvertId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "advert-comments":
+                    result = db.AComments.Where(c => c.AdvertId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "broadcast-likes":
+                    result = db.BLikes.Where(c => c.BroadcastId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "broadcast-comments":
+                    result = db.BComments.Where(c => c.BroadcastId == id && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "company-comments"://need to find a way for the ids
+                    result = db.CComments.Where(c => c.CompanyId == ID && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+                case "company-followings":
+                    result = db.Followings.Where(c => c.CompanyId == ID && c.time >= first && c.time <= last).Select(a => a.Customer).Project().To<CustomerDTO>();
+                    break;
+            }
+            return result;
         }
     }
 }

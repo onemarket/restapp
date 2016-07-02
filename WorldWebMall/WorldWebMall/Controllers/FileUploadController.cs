@@ -30,7 +30,7 @@ namespace WorldWebMall.Controllers
         static readonly string ServerUploadFolder = "C:/Users/tariro/Documents/Uploads";
         private MallContext db = new MallContext();
 
-        private static IAmazonS3 s3Client = Amazon.AWSClientFactory.CreateAmazonS3Client("AKIAJMKP7P3R6S7U5LIQ", "LJUg7L8k86x5vszvEH5CNMeWOVOT3iSXMqS4OM6A", Amazon.RegionEndpoint.USWest2);
+        private static IAmazonS3 s3Client = Amazon.AWSClientFactory.CreateAmazonS3Client("AKIAICLTMTUI7QMX7VBQ", "p/sM03sunyerbEarxgb099gv9llOCUnfTkSCLDvy", Amazon.RegionEndpoint.USWest2);
         //private static IAmazonS3 s3Client = new AmazonS3Client(Amazon.RegionEndpoint.USWest2);    
 
         [HttpPost]
@@ -236,6 +236,79 @@ namespace WorldWebMall.Controllers
             else
             {
                 customer.p_pic = new Picture() { path = bucketname + "/" + filename };
+                db.Entry(customer).State = EntityState.Modified;
+            }
+
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                throw;
+            }
+            return StatusCode(HttpStatusCode.Created);
+
+        }
+
+        //upload customer wallpaper
+        [Route("upload-customer-wallpaper")]
+        public async Task<IHttpActionResult> UploadCustomerWP()
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            string UserId = User.Identity.GetUserId();
+            Customer customer = await db.Customers.FindAsync(UserId);
+            //remember to put this wherever user identity is tested
+            if (customer == null)
+            {
+                return StatusCode(HttpStatusCode.Unauthorized);
+            }
+
+            if (!Request.Content.IsMimeMultipartContent())
+            {
+                this.Request.CreateResponse(HttpStatusCode.UnsupportedMediaType);
+            }
+
+            InMemoryMultipartStreamProvider provider = await Request.Content.ReadAsMultipartAsync<InMemoryMultipartStreamProvider>(new InMemoryMultipartStreamProvider());
+            IList<HttpContent> files = provider.Files;
+            HttpContent file = files[0];
+
+            Stream fileStream = await file.ReadAsStreamAsync();
+
+            // Create a stream provider for setting up output streams
+            string bucketname = "debug123456789oitems";
+            string filename = GenerateName(bucketname);
+            try
+            {
+                PutObjectRequest s3Request = new PutObjectRequest();
+                s3Request.BucketName = bucketname;
+                s3Request.InputStream = fileStream;
+                s3Request.Key = filename;
+                s3Request.ContentType = provider.GetImageType();
+                s3Request.CannedACL = S3CannedACL.PublicRead;
+                s3Request.StorageClass = S3StorageClass.Standard;
+                s3Client.PutObject(s3Request);
+            }
+            catch (Exception e)
+            {
+                return Ok(e);
+            }
+
+            Picture wpaper = db.Customers.Where(c => c.CustomerId == UserId).Select(a => a.wallpaper)
+                                .FirstOrDefault();
+
+            if (wpaper != null)
+            {
+                wpaper.path = bucketname + "/" + filename;
+                db.Entry(wpaper).State = EntityState.Modified;
+            }
+            else
+            {
+                customer.wallpaper = new Picture() { path = bucketname + "/" + filename };
                 db.Entry(customer).State = EntityState.Modified;
             }
 

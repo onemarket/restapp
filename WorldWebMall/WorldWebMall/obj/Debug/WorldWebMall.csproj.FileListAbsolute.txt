@@ -147,6 +147,6 @@ C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\bin\Microsoft.Owi
 C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\bin\Microsoft.Owin.Security.Twitter.xml
 C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\bin\Microsoft.Owin.Security.MicrosoftAccount.xml
 C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\bin\System.Web.Http.Owin.xml
-C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\obj\Debug\WorldWebMall.csprojResolveAssemblyReference.cache
 C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\obj\Debug\WorldWebMall.dll
 C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\obj\Debug\WorldWebMall.pdb
+C:\Users\tariro\Source\Repos\restapp\WorldWebMall\WorldWebMall\obj\Debug\WorldWebMall.csprojResolveAssemblyReference.cache
